@@ -18,10 +18,9 @@
         rustToolchain = pkgs.rust-bin.stable.latest.default;
 
         # ---- new: use requirements.txt directly ----
-        pythonEnv = poetry2nixLib.mkPythonEnvFromRequirements {
-          python = pkgs.python312;
-          requirements = ./python/requirements.txt;
-        };
+        pythonEnv = pkgs.python312.withPackages (ps: [ ps.pip ]);
+
+        # Install requirements.txt using mach-nix or pip (via shellHook)
 
         # ---- old: use poetry.lock ----
         # pythonEnv = poetry2nixLib.mkPoetryEnv {
@@ -37,8 +36,6 @@
           buildInputs = [ pkgs.makeWrapper ];
           postBuild = ''
             mkdir -p $out/bin
-            export PATH=${rustToolchain}/bin:$PATH
-            cargo install dora-cli --root=$out --bins
           '';
         };
 
@@ -53,8 +50,24 @@
           ];
 
           shellHook = ''
-            cowsay "Rust + Python hybrid dev environment activated!"
-            echo "Verifying installation..."
+            export COWSAY="$(which cowsay)"
+            export COWTHINK="$(which cowthink)"
+            export COWFILE=$(ls ${pkgs.cowsay}/share/cowsay/cows | shuf -n1)
+            export COW_OPTS="-f $COWFILE"
+
+            cowsay -f "$COWFILE" "[1;36mRust + Python hybrid dev environment activated![0m" | lolcat
+            echo "Installing python requirements..."
+            pip install --no-cache-dir -r ${toString ./python}/requirements.txt
+
+            echo "Installing dora-cli via cargo..."
+            if ! command -v dora >/dev/null 2>&1; then
+              cargo install dora-cli
+            fi
+
+            echo "Checking python packages..."
+pip check
+
+echo "Verifying installation..."
             rustc --version
             cargo --version
             dora --version
