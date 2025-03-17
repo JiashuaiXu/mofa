@@ -17,12 +17,19 @@
 
         rustToolchain = pkgs.rust-bin.stable.latest.default;
 
-        pythonEnv = poetry2nixLib.mkPoetryEnv {
-          projectDir = ./python;
+        # ---- new: use requirements.txt directly ----
+        pythonEnv = poetry2nixLib.mkPythonEnvFromRequirements {
           python = pkgs.python312;
-          extras = [ "all" ];
-          preferWheels = true;
+          requirements = ./python/requirements.txt;
         };
+
+        # ---- old: use poetry.lock ----
+        # pythonEnv = poetry2nixLib.mkPoetryEnv {
+        #   projectDir = ./python;
+        #   python = pkgs.python312;
+        #   extras = [ "all" ];
+        #   preferWheels = true;
+        # };
 
         rustEnv = pkgs.symlinkJoin {
           name = "rust-env-with-dora";
