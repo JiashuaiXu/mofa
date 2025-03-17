@@ -15,36 +15,139 @@
 
         rustToolchain = pkgs.rust-bin.stable.latest.default;
 
-        pythonEnv = pkgs.python311.withPackages (ps: with ps; [
-          torch
-          scipy
-          imageio
-          opencv4
-          matplotlib
+        pythonEnv = pkgs.python312.withPackages (ps: with ps; [
+          # --------- base-tool --------- #
+          sphinx
+          sphinx-rtd-theme
+          pytest
+          pytest-cov
+          pyrootutils
+          pre-commit
+          twine
+          wheel
+          coverage
+          furo
+          myst-parser
+          pytest-mock
+          pendulum
+          python-dotenv
+          cookiecutter
+          setuptools
+
+          # --------- date --------- #
+          openpyxl
+          attrs
+
+          # --------- path --------- #
+          pathlib
+
+          # --------- web --------- #
+          streamlit
+
+          # --------- cli --------- #
+          # No entries
+
+          # --------- log --------- #
+          loguru
+          prettytable
+
+          # --------- ai-tools --------- #
+          langchain-openai
+          langchain-community
+          langchain-cohere
+          langchain-postgres
+          openai
+          duckduckgo-search
+          whisper
+          arxiv
+
+          # --------- server --------- #
+          fastapi
+          uvicorn
+
+          # --------- db --------- #
+          psycopg
+          psycopg-binary
+          langchain-chroma
+          chromadb
+
+          # --------- deploy --------- #
+          # ansible is commented out
+
+          # --------- data --------- #
+          pydantic
           numpy
-          tqdm
+          pandas
+          pypdf
+          pyarrow
+          unstructured
+          python-docx
+          python-magic
+          python-pptx
+          docx2txt
+          markdown
+
+          # --------- graph database --------- #
+          neo4j
+
+          # --------- yaml --------- #
+          pyyaml
+
+          # --------- agent --------- #
+          crewai
+          crewai-tools
+          dspy-ai
+
+          # --------- distributed --------- #
+          dora-rs
+
+          # --------- stock --------- #
+          yfinance
+
+          # --------- embedding --------- #
+          sentence-transformers
           transformers
-          # 这里根据你的 python/requirements.txt 增减
+
+          # --------- ultralytics --------- #
+          ultralytics
+
+          # --------- web sider --------- #
+          scrapegraphai
         ]);
+
+        rustEnv = pkgs.symlinkJoin {
+          name = "rust-env-with-dora";
+          paths = [ rustToolchain pkgs.cargo ];
+          buildInputs = [ pkgs.makeWrapper ];
+          postBuild = ''
+            mkdir -p $out/bin
+            export PATH=${rustToolchain}/bin:$PATH
+            cargo install dora-cli --root=$out --bins
+          '';
+        };
+
       in
       {
         devShell = pkgs.mkShell {
           buildInputs = [
-            rustToolchain
-            pkgs.cargo
+            rustEnv
             pythonEnv
-            pkgs.maturin  # Rust 和 Python 混合项目常用的构建工具
+            pkgs.maturin
+            pkgs.cowsay
           ];
 
           shellHook = ''
-            echo "Rust + Python hybrid dev environment activated!"
+            cowsay "Rust + Python hybrid dev environment activated!"
+            echo "Verifying installation..."
+            rustc --version
+            cargo --version
+            dora --version
           '';
         };
 
-        # 可以定义 nix run 来跑 Rust 或 Python 项目
         packages.default = pkgs.writeShellApplication {
           name = "mofa";
-          runtimeInputs = [ pythonEnv rustToolchain ];
+          runtimeInputs = [ pythonEnv rustEnv ];
           text = ''
             echo "Usage: nix run .#mofa -- <rust|python> [args...]"
             if [ "$1" = "rust" ]; then
